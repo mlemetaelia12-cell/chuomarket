@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+
+.vercel/
+*.pem
+
+migration-backups/
+
+# Local migration files not ready for sharing
+drizzle/0015_pesapal_reversal_protection.sql
+drizzle/meta/0015_snapshot.json
+drizzle/meta/_journal.json.backup
+drizzle/0010_better_auth_admin_fields.sqlcode
+migration-backups/
+.vercel/

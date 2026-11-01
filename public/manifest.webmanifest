@@ -1,0 +1,40 @@
+{
+  "id": "/en",
+  "name": "Chuo Market",
+  "short_name": "Chuo",
+  "description": "The marketplace and community for university students in Tanzania.",
+  "lang": "en-TZ",
+  "start_url": "/en",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5F7FA",
+  "theme_color": "#1769AA",
+  "categories": ["shopping", "social"],
+  "icons": [
+    {
+      "src": "/icons/chuo-market-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/chuo-market-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/chuo-market-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/chuo-market-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
