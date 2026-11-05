@@ -1,11 +1,10 @@
-
 import type { Metadata, Viewport } from 'next';
 import Image from 'next/image';
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { notFound } from 'next/navigation';
 
 import { AppSplashScreen } from '@/components/branding/app-splash-screen';
 import { BottomNavigation } from '@/components/navigation/bottom-navigation';
@@ -20,18 +19,15 @@ export const metadata: Metadata = {
     default: 'Chuo Market',
     template: '%s | Chuo Market',
   },
-  description: 'The marketplace and community for university students in Tanzania.',
+  description:
+    'The marketplace and community for university students in Tanzania.',
   manifest: '/manifest.webmanifest',
   icons: {
-<<<<<<< HEAD
     icon: [
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
-=======
-    icon: '/icons/chuo-market-192.png',
->>>>>>> d286a82 (feat: update community, image storage and branding)
     apple: '/apple-touch-icon.png',
   },
   appleWebApp: {
@@ -105,11 +101,7 @@ export default async function LocaleLayout({
                   className="size-10 rounded-xl object-cover shadow-sm transition group-hover:scale-105"
                   height={40}
                   priority
-<<<<<<< HEAD
                   src="/icons/icon-192.png"
-=======
-                  src="/icons/chuo-market-192.png"
->>>>>>> d286a82 (feat: update community, image storage and branding)
                   width={40}
                 />
 
