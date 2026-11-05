@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import Image from 'next/image';
 import { Suspense } from 'react';
@@ -22,11 +23,15 @@ export const metadata: Metadata = {
   description: 'The marketplace and community for university students in Tanzania.',
   manifest: '/manifest.webmanifest',
   icons: {
+<<<<<<< HEAD
     icon: [
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
+=======
+    icon: '/icons/chuo-market-192.png',
+>>>>>>> d286a82 (feat: update community, image storage and branding)
     apple: '/apple-touch-icon.png',
   },
   appleWebApp: {
@@ -57,7 +62,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
+export default async function LocaleLayout({
+  children,
+  params,
+}: LocaleLayoutProps) {
   const { locale } = await params;
 
   if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
@@ -80,7 +88,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
             className="sr-only fixed left-4 top-4 z-[100] rounded-xl bg-brand-950 px-5 py-3 text-sm font-bold text-white focus:not-sr-only"
             href="#main-content"
           >
-            {locale === 'sw' ? 'Ruka kwenda kwenye maudhui' : 'Skip to main content'}
+            {locale === 'sw'
+              ? 'Ruka kwenda kwenye maudhui'
+              : 'Skip to main content'}
           </a>
 
           <header className="sticky top-0 z-30 border-b border-divider bg-white/90 shadow-sm backdrop-blur-xl">
@@ -95,7 +105,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
                   className="size-10 rounded-xl object-cover shadow-sm transition group-hover:scale-105"
                   height={40}
                   priority
+<<<<<<< HEAD
                   src="/icons/icon-192.png"
+=======
+                  src="/icons/chuo-market-192.png"
+>>>>>>> d286a82 (feat: update community, image storage and branding)
                   width={40}
                 />
 
