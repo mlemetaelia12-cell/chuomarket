@@ -10,6 +10,9 @@ const config: Config = {
       // =====================================================
 
       colors: {
+        navy: { 950: '#11152E', 900: '#191E3D', 800: '#252B50' },
+        royal: { DEFAULT: '#6D28D9', dark: '#5B21B6', soft: '#F3E8FF', subtle: '#FAF5FF' },
+        electric: { DEFAULT: '#C5F946', dark: '#A7D92D', light: '#E9FDBA', soft: '#F5FFE0' },
         brand: {
           950: '#172B3A',
           900: '#123B5B',
@@ -86,9 +89,9 @@ const config: Config = {
 
         cinematic: '0 24px 80px rgba(23, 43, 58, 0.25)',
 
-        'violet-glow': '0 8px 35px rgba(23, 105, 170, 0.18)',
+        'violet-glow': '0 8px 35px rgba(109, 40, 217, 0.18)',
 
-        'lime-glow': '0 8px 28px rgba(35, 155, 98, 0.16)',
+        'lime-glow': '0 8px 28px rgba(197, 249, 70, 0.18)',
       },
 
       // =====================================================

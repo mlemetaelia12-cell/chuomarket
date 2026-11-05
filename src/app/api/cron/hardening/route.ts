@@ -7,10 +7,13 @@ import {
   communityPosts,
   listingImages,
   listings,
+  housingImages,
+  serviceImages,
+  studyMaterials,
   subscriptions,
   userNotifications,
 } from '@/db/schema';
-import { getR2Client, r2Bucket, r2PrivateBucket, r2PublicUrl } from '@/lib/r2';
+import { getPrivateR2Bucket, getR2Client, r2Bucket, r2PublicUrl } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -79,7 +82,7 @@ export async function GET(request: Request) {
   // material PDFs are stored in a separate private bucket.
   let deletedOrphans = 0;
 
-  const [imageRows, postRows] = await Promise.all([
+  const [imageRows, postRows, housingImageRows, serviceImageRows, privateMaterialRows] = await Promise.all([
     db.select({ url: listingImages.fileUrl }).from(listingImages),
     db
       .select({
@@ -87,10 +90,15 @@ export async function GET(request: Request) {
         photoUrl: communityPosts.photoUrl,
       })
       .from(communityPosts),
+    db.select({ objectKey: housingImages.objectKey }).from(housingImages),
+    db.select({ objectKey: serviceImages.objectKey }).from(serviceImages),
+    db.select({ objectKey: studyMaterials.objectKey }).from(studyMaterials),
   ]);
 
   const publicReferences = new Set<string>([
     ...imageRows.map((row) => row.url),
+    ...(r2PublicUrl ? housingImageRows.map((row) => `${r2PublicUrl}/${row.objectKey}`) : []),
+    ...(r2PublicUrl ? serviceImageRows.map((row) => `${r2PublicUrl}/${row.objectKey}`) : []),
     ...postRows.flatMap((row) =>
       [row.fileUrl, row.photoUrl].filter((value): value is string =>
         Boolean(value && !value.startsWith('r2-private:')),
@@ -99,15 +107,17 @@ export async function GET(request: Request) {
   ]);
   const privateReferences = new Set<string>(
     postRows
-      .map((row) => row.fileUrl)
+      .flatMap((row) => [row.fileUrl, row.photoUrl])
       .filter((value): value is string => Boolean(value?.startsWith('r2-private:'))),
   );
+  for (const row of privateMaterialRows) privateReferences.add(`r2-private:${row.objectKey}`);
 
-  const hasConfiguredR2Bucket = Boolean((r2Bucket && r2PublicUrl) || r2PrivateBucket);
+  const privateBucket = getPrivateR2Bucket();
+  const hasConfiguredR2Bucket = Boolean((r2Bucket && r2PublicUrl) || privateBucket);
   const client = hasConfiguredR2Bucket ? getR2Client() : null;
 
   if (r2Bucket && r2PublicUrl && client) {
-    for (const prefix of ['listings/', 'community/']) {
+    for (const prefix of ['listings/', 'community/', 'housing/', 'services/']) {
       let continuationToken: string | undefined;
 
       do {
@@ -139,33 +149,34 @@ export async function GET(request: Request) {
     }
   }
 
-  if (r2PrivateBucket && client) {
-    let continuationToken: string | undefined;
-    do {
-      const page = await client.send(
-        new ListObjectsV2Command({
-          Bucket: r2PrivateBucket,
-          Prefix: 'community/',
-          ContinuationToken: continuationToken,
-        }),
-      );
-      const staleKeys = (page.Contents ?? [])
-        .filter((object) => object.Key && object.LastModified && object.LastModified < cutoff)
-        .filter((object) => !privateReferences.has(`r2-private:${object.Key}`))
-        .map((object) => ({ Key: object.Key! }));
-
-      if (staleKeys.length > 0) {
-        await client.send(
-          new DeleteObjectsCommand({
-            Bucket: r2PrivateBucket,
-            Delete: { Objects: staleKeys, Quiet: true },
+  if (privateBucket && client) {
+    for (const prefix of ['community/', 'library/']) {
+      let continuationToken: string | undefined;
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({
+            Bucket: privateBucket,
+            Prefix: prefix,
+            ContinuationToken: continuationToken,
           }),
         );
-        deletedOrphans += staleKeys.length;
-      }
+        const staleKeys = (page.Contents ?? [])
+          .filter((object) => object.Key && object.LastModified && object.LastModified < cutoff)
+          .filter((object) => !privateReferences.has(`r2-private:${object.Key}`))
+          .map((object) => ({ Key: object.Key! }));
 
-      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
-    } while (continuationToken);
+        if (staleKeys.length > 0) {
+          await client.send(
+            new DeleteObjectsCommand({
+              Bucket: privateBucket,
+              Delete: { Objects: staleKeys, Quiet: true },
+            }),
+          );
+          deletedOrphans += staleKeys.length;
+        }
+        continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (continuationToken);
+    }
   }
 
   return NextResponse.json({

@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { requireMarketplaceUser } from '@/lib/marketplace-user';
 import { enforceRateLimit } from '@/lib/rate-limit';
-import { getR2Client, r2PrivateBucket } from '@/lib/r2';
+import { getPrivateR2Bucket, getR2Client } from '@/lib/r2';
 
 const schema = z.discriminatedUnion('kind', [
   z.object({
@@ -50,7 +50,8 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!r2PrivateBucket) {
+  const privateBucket = getPrivateR2Bucket();
+  if (!privateBucket) {
     console.error('[R2 CONFIG MISSING] Private bucket is not configured.');
 
     return NextResponse.json(
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
     const key = `community/${user.id}/${randomUUID()}.${extension}`;
 
     const command = new PutObjectCommand({
-      Bucket: r2PrivateBucket,
+      Bucket: privateBucket,
       Key: key,
       ContentType: parsed.data.contentType,
       ContentLength: parsed.data.size,

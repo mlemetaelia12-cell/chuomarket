@@ -1,4 +1,3 @@
-
 import {
   GetObjectCommand,
   HeadObjectCommand,
@@ -10,7 +9,11 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { communityPosts, pointEvents, users } from '@/db/schema';
 import { requireMarketplaceUser } from '@/lib/marketplace-user';
-import { getR2Client, r2PrivateBucket, r2PublicUrl } from '@/lib/r2';
+import {
+  getPrivateR2Bucket,
+  getR2Client,
+  r2PublicUrl,
+} from '@/lib/r2';
 import { enforceRateLimit } from '@/lib/rate-limit';
 
 const schema = z.discriminatedUnion('type', [
@@ -22,12 +25,14 @@ const schema = z.discriminatedUnion('type', [
     year: z.number().int().min(1950).max(2100),
     fileUrl: z.string().min(1).max(512),
   }),
+
   z.object({
     type: z.literal('room'),
     title: z.string().trim().min(3).max(160),
     description: z.string().trim().min(5).max(5000),
     meetingPlace: z.string().trim().min(2).max(180),
   }),
+
   z.object({
     type: z.literal('lost_found'),
     title: z.string().trim().min(3).max(160),
@@ -39,7 +44,10 @@ const schema = z.discriminatedUnion('type', [
   }),
 ]);
 
-function getPhotoKey(photoUrl: string, authorId: string): string | null {
+function getPhotoKey(
+  photoUrl: string,
+  authorId: string,
+): string | null {
   let key: string;
 
   if (photoUrl.startsWith('r2-private:')) {
@@ -50,6 +58,7 @@ function getPhotoKey(photoUrl: string, authorId: string): string | null {
     try {
       const baseUrl = new URL(r2PublicUrl);
       const imageUrl = new URL(photoUrl);
+
       const basePath = baseUrl.pathname.replace(/\/$/, '');
 
       if (
@@ -86,16 +95,24 @@ function getPhotoKey(photoUrl: string, authorId: string): string | null {
 }
 
 export async function GET(request: Request) {
+  const privateBucket = getPrivateR2Bucket();
+
   const type = new URL(request.url).searchParams.get('type');
 
   const rows = await db.query.communityPosts.findMany({
     where:
-      type === 'material' || type === 'room' || type === 'lost_found'
+      type === 'material' ||
+      type === 'room' ||
+      type === 'lost_found'
         ? eq(communityPosts.type, type)
         : undefined,
+
     orderBy: [desc(communityPosts.createdAt)],
     limit: 60,
-    with: { author: true },
+
+    with: {
+      author: true,
+    },
   });
 
   const posts = rows.map((post) => {
@@ -104,9 +121,12 @@ export async function GET(request: Request) {
     if (
       post.type === 'lost_found' &&
       post.photoUrl &&
-      r2PrivateBucket
+      privateBucket
     ) {
-      const key = getPhotoKey(post.photoUrl, post.authorId);
+      const key = getPhotoKey(
+        post.photoUrl,
+        post.authorId,
+      );
 
       if (key) {
         photoUrl = `/api/community/${post.id}/photo`;
@@ -125,6 +145,7 @@ export async function GET(request: Request) {
       postStatus: post.postStatus,
       lostFoundType: post.lostFoundType,
       createdAt: post.createdAt,
+
       author: {
         username: post.author.username,
         createdAt: post.author.createdAt,
@@ -146,11 +167,24 @@ export async function POST(request: Request) {
   const user = await requireMarketplaceUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'unauthorized' },
+      { status: 401 },
+    );
   }
 
-  if (!(await enforceRateLimit(request, 'community-create', 8, 60))) {
-    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  if (
+    !(await enforceRateLimit(
+      request,
+      'community-create',
+      8,
+      60,
+    ))
+  ) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429 },
+    );
   }
 
   const parsed = schema.safeParse(
@@ -158,30 +192,44 @@ export async function POST(request: Request) {
   );
 
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid_post' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'invalid_post' },
+      { status: 400 },
+    );
   }
 
   const data = parsed.data;
 
+  // Get the private bucket once inside POST.
+  // Never fall back to the public bucket.
+  const privateBucket = getPrivateR2Bucket();
+
   if (data.type === 'material') {
     if (
-      !r2PrivateBucket ||
-      !data.fileUrl.startsWith(`r2-private:community/${user.id}/`) ||
+      !privateBucket ||
+      !data.fileUrl.startsWith(
+        `r2-private:community/${user.id}/`,
+      ) ||
       !data.fileUrl.endsWith('.pdf') ||
       data.fileUrl.includes('..') ||
       data.fileUrl.includes('\\')
     ) {
-      return NextResponse.json({ error: 'invalid_file' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'invalid_file' },
+        { status: 400 },
+      );
     }
 
-    const key = data.fileUrl.slice('r2-private:'.length);
+    const key = data.fileUrl.slice(
+      'r2-private:'.length,
+    );
 
     try {
       const storage = getR2Client();
 
       const metadata = await storage.send(
         new HeadObjectCommand({
-          Bucket: r2PrivateBucket,
+          Bucket: privateBucket,
           Key: key,
         }),
       );
@@ -190,22 +238,30 @@ export async function POST(request: Request) {
         !metadata.ContentLength ||
         metadata.ContentLength > 5 * 1024 * 1024 ||
         metadata.ContentLength < 5 ||
-        metadata.ContentType?.split(';')[0].trim().toLowerCase() !==
-          'application/pdf'
+        metadata.ContentType
+          ?.split(';')[0]
+          .trim()
+          .toLowerCase() !== 'application/pdf'
       ) {
-        return NextResponse.json({ error: 'invalid_file' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'invalid_file' },
+          { status: 400 },
+        );
       }
 
       const sample = await storage.send(
         new GetObjectCommand({
-          Bucket: r2PrivateBucket,
+          Bucket: privateBucket,
           Key: key,
           Range: 'bytes=0-1023',
         }),
       );
 
       if (!sample.Body) {
-        return NextResponse.json({ error: 'invalid_file' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'invalid_file' },
+          { status: 400 },
+        );
       }
 
       const prefix = new TextDecoder().decode(
@@ -213,13 +269,19 @@ export async function POST(request: Request) {
       );
 
       if (!prefix.includes('%PDF-')) {
-        return NextResponse.json({ error: 'invalid_file' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'invalid_file' },
+          { status: 400 },
+        );
       }
     } catch (error) {
-      console.error('Community PDF verification failed.', {
-        userId: user.id,
-        error,
-      });
+      console.error(
+        'Community PDF verification failed.',
+        {
+          userId: user.id,
+          error,
+        },
+      );
 
       return NextResponse.json(
         { error: 'file_verification_unavailable' },
@@ -228,22 +290,45 @@ export async function POST(request: Request) {
     }
   }
 
-  if (data.type === 'lost_found' && data.photoUrl) {
-    const key = getPhotoKey(data.photoUrl, user.id);
+  if (
+    data.type === 'lost_found' &&
+    data.photoUrl
+  ) {
+    const key = getPhotoKey(
+      data.photoUrl,
+      user.id,
+    );
 
     if (
-      !r2PrivateBucket ||
+      !privateBucket ||
       !key ||
-      !data.photoUrl.startsWith(`r2-private:community/${user.id}/`)
+      !data.photoUrl.startsWith(
+        `r2-private:community/${user.id}/`,
+      )
     ) {
-      return NextResponse.json({ error: 'invalid_photo' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'invalid_photo' },
+        { status: 400 },
+      );
     }
   }
 
   const [post] = await db
     .insert(communityPosts)
-    .values({ authorId: user.id, ...data })
-    .returning({ id: communityPosts.id });
+    .values({
+      authorId: user.id,
+      ...data,
+    })
+    .returning({
+      id: communityPosts.id,
+    });
+
+  if (!post) {
+    return NextResponse.json(
+      { error: 'post_creation_failed' },
+      { status: 500 },
+    );
+  }
 
   if (data.type === 'material') {
     const [reward] = await db
@@ -256,7 +341,9 @@ export async function POST(request: Request) {
         referenceId: post.id,
       })
       .onConflictDoNothing()
-      .returning({ id: pointEvents.id });
+      .returning({
+        id: pointEvents.id,
+      });
 
     if (reward) {
       await db
@@ -272,7 +359,8 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       id: post.id,
-      pointsAwarded: data.type === 'material' ? 10 : 0,
+      pointsAwarded:
+        data.type === 'material' ? 10 : 0,
     },
     { status: 201 },
   );

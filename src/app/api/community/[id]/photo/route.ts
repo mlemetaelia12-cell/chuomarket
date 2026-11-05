@@ -6,19 +6,34 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { communityPosts } from '@/db/schema';
 import { requireMarketplaceUser } from '@/lib/marketplace-user';
-import { getR2Client, r2PrivateBucket, r2PublicUrl } from '@/lib/r2';
+import {
+  getPrivateR2Bucket,
+  getR2Client,
+  r2Bucket,
+  r2PublicUrl,
+} from '@/lib/r2';
 
-function getPhotoKey(photoUrl: string, authorId: string): string | null {
+function getPhotoKey(
+  photoUrl: string,
+  authorId: string,
+): { key: string; bucket: string } | null {
   let key: string;
+  let bucket: string;
 
   if (photoUrl.startsWith('r2-private:')) {
+    const privateBucket = getPrivateR2Bucket();
+
+    if (!privateBucket) return null;
+
+    bucket = privateBucket;
     key = photoUrl.slice('r2-private:'.length);
   } else {
-    if (!r2PublicUrl) return null;
+    if (!r2PublicUrl || !r2Bucket) return null;
 
     try {
       const baseUrl = new URL(r2PublicUrl);
       const imageUrl = new URL(photoUrl);
+
       const basePath = baseUrl.pathname.replace(/\/$/, '');
 
       if (
@@ -33,6 +48,8 @@ function getPhotoKey(photoUrl: string, authorId: string): string | null {
       ) {
         return null;
       }
+
+      bucket = r2Bucket;
 
       key = decodeURIComponent(
         imageUrl.pathname.slice(basePath.length + 1),
@@ -51,73 +68,90 @@ function getPhotoKey(photoUrl: string, authorId: string): string | null {
     return null;
   }
 
-  return key;
+  return { key, bucket };
 }
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await requireMarketplaceUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { error: 'login_required' },
-      { status: 401 },
-      );
-  }
-
-  const { id } = await params;
-
-  const post = await db.query.communityPosts.findFirst({
-    where: eq(communityPosts.id, id),
-    columns: {
-      id: true,
-      type: true,
-      authorId: true,
-      photoUrl: true,
-    },
-  });
-
-  if (
-    !post ||
-    post.type !== 'lost_found' ||
-    !post.photoUrl ||
-    !r2PrivateBucket
-  ) {
-    return NextResponse.json(
-      { error: 'not_found' },
-      { status: 404 },
-    );
-  }
-
-  const key = getPhotoKey(post.photoUrl, post.authorId);
-
-  if (!key) {
-    return NextResponse.json(
-      { error: 'invalid_photo' },
-      { status: 404 },
-    );
-  }
-
   try {
+    const user = await requireMarketplaceUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'login_required' },
+        {
+          status: 401,
+          headers: { 'Cache-Control': 'no-store' },
+        },
+      );
+    }
+
+    const { id } = await params;
+
+    const post = await db.query.communityPosts.findFirst({
+      where: eq(communityPosts.id, id),
+      columns: {
+        id: true,
+        type: true,
+        authorId: true,
+        photoUrl: true,
+      },
+    });
+
+    if (
+      !post ||
+      post.type !== 'lost_found' ||
+      !post.photoUrl
+    ) {
+      return NextResponse.json(
+        { error: 'not_found' },
+        {
+          status: 404,
+          headers: { 'Cache-Control': 'no-store' },
+        },
+      );
+    }
+
+    const photo = getPhotoKey(
+      post.photoUrl,
+      post.authorId,
+    );
+
+    if (!photo) {
+      return NextResponse.json(
+        { error: 'invalid_photo' },
+        {
+          status: 404,
+          headers: { 'Cache-Control': 'no-store' },
+        },
+      );
+    }
+
     const object = await getR2Client().send(
       new GetObjectCommand({
-        Bucket: r2PrivateBucket,
-        Key: key,
+        Bucket: photo.bucket,
+        Key: photo.key,
       }),
     );
 
     if (
       !object.Body ||
-      !object.ContentLength ||
+      typeof object.ContentLength !== 'number' ||
       object.ContentLength > 200 * 1024 ||
-      object.ContentType?.split(';')[0].trim().toLowerCase() !==
-        'image/webp'
+      object.ContentLength <= 0 ||
+      object.ContentType
+        ?.split(';')[0]
+        .trim()
+        .toLowerCase() !== 'image/webp'
     ) {
       return NextResponse.json(
         { error: 'invalid_photo' },
-        { status: 404 },
+        {
+          status: 404,
+          headers: { 'Cache-Control': 'no-store' },
+        },
       );
     }
 
@@ -128,21 +162,29 @@ export async function GET(
       'X-Content-Type-Options': 'nosniff',
     });
 
-    headers.set('Content-Length', String(object.ContentLength));
+    headers.set(
+      'Content-Length',
+      String(object.ContentLength),
+    );
 
-    return new Response(object.Body.transformToWebStream(), {
-      status: 200,
-      headers,
-    });
+    return new Response(
+      object.Body.transformToWebStream(),
+      {
+        status: 200,
+        headers,
+      },
+    );
   } catch (error) {
     console.error('Community photo retrieval failed.', {
-      postId: post.id,
       error,
     });
 
     return NextResponse.json(
       { error: 'photo_unavailable' },
-      { status: 503 },
+      {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      },
     );
   }
 }

@@ -1,5 +1,6 @@
 import { getLocale } from 'next-intl/server';
 import { AdminConsole } from '@/components/admin/admin-console';
+import { V2Moderation } from '@/components/admin/v2-moderation';
 import { requireRole } from '@/lib/session';
 
 export default async function AdminPage() {
@@ -23,6 +24,7 @@ export default async function AdminPage() {
         </p>
       </header>
       <AdminConsole superadmin={session.user.role === 'superadmin'} />
+      <V2Moderation />
     </section>
   );
 }

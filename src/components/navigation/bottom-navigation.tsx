@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import {
   BookOpen,
   CircleUserRound,
@@ -12,6 +12,8 @@ import {
   Users,
   X,
   ChevronRight,
+  BellRing,
+  BriefcaseBusiness,
 } from 'lucide-react';
 
 import { Link, usePathname } from '@/i18n/navigation';
@@ -25,14 +27,15 @@ const navigationItems = [
 
 const actions = [
   { key: 'sellItem', Icon: ShoppingBag, href: '/sell' },
-  { key: 'uploadNotes', Icon: BookOpen, href: '/community/new?type=material' },
+  { key: 'rooms', Icon: House, href: '/rooms' },
+  { key: 'uploadNotes', Icon: BookOpen, href: '/library' },
+  { key: 'alerts', Icon: BellRing, href: '/alerts' },
+  { key: 'services', Icon: BriefcaseBusiness, href: '/services' },
   { key: 'lostFound', Icon: Users, href: '/community/new?type=lost_found' },
-  { key: 'rooms', Icon: House, href: '/community/new?type=room' },
 ] as const;
 
 export function BottomNavigation() {
   const t = useTranslations('Navigation');
-  const locale = useLocale();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -109,9 +112,7 @@ export function BottomNavigation() {
           </div>
 
           <p className="px-2 pb-1 pt-4 text-center text-[10px] font-medium text-ink-muted">
-            {locale === 'sw'
-              ? 'Soko na jamii ya wanafunzi.'
-              : 'Your campus marketplace and community.'}
+            {t('quickTagline')}
           </p>
         </section>
       )}

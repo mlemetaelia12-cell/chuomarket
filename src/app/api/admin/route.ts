@@ -1,4 +1,4 @@
-import { desc, eq, gte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/db';
@@ -53,6 +53,11 @@ export async function GET() {
     })
     .from(reports)
     .innerJoin(users, eq(reports.reporterId, users.id))
+    .where(or(
+      isNotNull(reports.listingId),
+      isNotNull(reports.communityPostId),
+      and(isNotNull(reports.reportedUserId), isNull(reports.housingListingId), isNull(reports.roommateRequestId), isNull(reports.studyMaterialId), isNull(reports.campusAlertId), isNull(reports.serviceListingId)),
+    ))
     .orderBy(desc(reports.createdAt))
     .limit(100);
   if (actor.role !== 'superadmin') {

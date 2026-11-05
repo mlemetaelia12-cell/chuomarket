@@ -19,6 +19,8 @@ export function AppSplashScreen() {
       // Continue showing the splash when browser storage is unavailable.
     }
 
+    // Save the flag only after the timer finishes. This also behaves correctly
+    // when React Strict Mode runs the effect setup/cleanup cycle in development.
     const timeout = window.setTimeout(() => {
       try {
         window.sessionStorage.setItem(SPLASH_KEY, 'true');

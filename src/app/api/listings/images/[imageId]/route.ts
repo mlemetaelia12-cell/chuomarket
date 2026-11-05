@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { listingImages, listings } from '@/db/schema';
 import { requireMarketplaceUser } from '@/lib/marketplace-user';
-import { getR2Client, r2PrivateBucket, r2PublicUrl } from '@/lib/r2';
+import { getR2Client, r2Bucket, r2PublicUrl } from '@/lib/r2';
 
 function getImageKey(fileUrl: string, ownerId: string): string | null {
   if (!r2PublicUrl) return null;
@@ -74,7 +74,7 @@ export async function GET(
     .limit(1)
     .then((rows) => rows[0]);
 
-  if (!image || !r2PrivateBucket) {
+  if (!image || !r2Bucket) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
@@ -95,7 +95,7 @@ export async function GET(
   try {
     const object = await getR2Client().send(
       new GetObjectCommand({
-        Bucket: r2PrivateBucket,
+        Bucket: r2Bucket,
         Key: key,
       }),
     );

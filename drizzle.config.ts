@@ -1,14 +1,10 @@
 import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
-const databaseUrl =
-  process.env.MIGRATION_DATABASE_URL ||
-  process.env.DATABASE_URL;
+const databaseUrl = process.env.MIGRATION_DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error(
-    'MIGRATION_DATABASE_URL or DATABASE_URL is required.',
-  );
+  throw new Error('MIGRATION_DATABASE_URL is required for Drizzle commands. Set it to a non-production database unless a reviewed production release is intended.');
 }
 
 export default defineConfig({

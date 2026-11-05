@@ -78,6 +78,83 @@ export const pointEventTypeEnum = pgEnum('point_event_type', [
   'answer_post',
 ]);
 
+export const housingListingTypeEnum = pgEnum('housing_listing_type', [
+  'room',
+  'hostel',
+  'bed_space',
+]);
+
+export const housingRoomTypeEnum = pgEnum('housing_room_type', [
+  'single',
+  'shared',
+  'self_contained',
+  'hostel',
+]);
+
+export const housingListingStatusEnum = pgEnum('housing_listing_status', [
+  'published',
+  'filled',
+  'hidden',
+]);
+
+export const roommateRequestStatusEnum = pgEnum('roommate_request_status', [
+  'active',
+  'closed',
+]);
+
+export const libraryMaterialTypeEnum = pgEnum('library_material_type', [
+  'notes',
+  'past_paper',
+  'study_guide',
+  'assignment',
+  'revision',
+]);
+
+export const moderationStatusEnum = pgEnum('moderation_status', [
+  'pending',
+  'approved',
+  'rejected',
+  'removed',
+]);
+
+export const alertCategoryEnum = pgEnum('alert_category', [
+  'academic_deadline',
+  'registration',
+  'examinations',
+  'scholarships',
+  'events',
+  'announcements',
+  'lost_found',
+]);
+
+export const alertTrustEnum = pgEnum('alert_trust', [
+  'official',
+  'community',
+  'unverified',
+]);
+
+export const campusAlertStatusEnum = pgEnum('campus_alert_status', [
+  'published',
+  'removed',
+]);
+
+export const serviceCategoryEnum = pgEnum('service_category', [
+  'web_development',
+  'graphic_design',
+  'photography',
+  'tutoring',
+  'typing',
+  'technical_support',
+  'other',
+]);
+
+export const serviceListingStatusEnum = pgEnum('service_listing_status', [
+  'published',
+  'paused',
+  'closed',
+  'removed',
+]);
+
 // ============================================================
 // SHARED COLUMNS
 // ============================================================
@@ -376,6 +453,16 @@ export const reports = pgTable(
       { onDelete: 'set null' },
     ),
 
+    housingListingId: uuid('housing_listing_id').references((): AnyPgColumn => housingListings.id, { onDelete: 'set null' }),
+
+    roommateRequestId: uuid('roommate_request_id').references((): AnyPgColumn => roommateRequests.id, { onDelete: 'set null' }),
+
+    studyMaterialId: uuid('study_material_id').references((): AnyPgColumn => studyMaterials.id, { onDelete: 'set null' }),
+
+    campusAlertId: uuid('campus_alert_id').references((): AnyPgColumn => campusAlerts.id, { onDelete: 'set null' }),
+
+    serviceListingId: uuid('service_listing_id').references((): AnyPgColumn => serviceListings.id, { onDelete: 'set null' }),
+
     reason: varchar('reason', { length: 80 }).notNull(),
 
     details: text('details'),
@@ -395,10 +482,20 @@ export const reports = pgTable(
     index('reports_community_post_idx').on(
       t.communityPostId,
     ),
+    index('reports_housing_listing_idx').on(t.housingListingId),
+    index('reports_roommate_request_idx').on(t.roommateRequestId),
+    index('reports_study_material_idx').on(t.studyMaterialId),
+    index('reports_campus_alert_idx').on(t.campusAlertId),
+    index('reports_service_listing_idx').on(t.serviceListingId),
 
     uniqueIndex('reports_reporter_listing_unique')
       .on(t.reporterId, t.listingId)
       .where(sql`${t.listingId} IS NOT NULL`),
+    uniqueIndex('reports_reporter_housing_unique').on(t.reporterId, t.housingListingId).where(sql`${t.housingListingId} IS NOT NULL`),
+    uniqueIndex('reports_reporter_roommate_unique').on(t.reporterId, t.roommateRequestId).where(sql`${t.roommateRequestId} IS NOT NULL`),
+    uniqueIndex('reports_reporter_material_unique').on(t.reporterId, t.studyMaterialId).where(sql`${t.studyMaterialId} IS NOT NULL`),
+    uniqueIndex('reports_reporter_alert_unique').on(t.reporterId, t.campusAlertId).where(sql`${t.campusAlertId} IS NOT NULL`),
+    uniqueIndex('reports_reporter_service_unique').on(t.reporterId, t.serviceListingId).where(sql`${t.serviceListingId} IS NOT NULL`),
   ],
 );
 
@@ -700,8 +797,204 @@ export const communityAnswers = pgTable(
 );
 
 // ============================================================
+// CHUO MARKET V2 — HOUSING
+// ============================================================
+
+export const housingListings = pgTable(
+  'housing_listings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    listingType: housingListingTypeEnum('listing_type').notNull(),
+    title: varchar('title', { length: 140 }).notNull(),
+    description: text('description').notNull(),
+    university: varchar('university', { length: 160 }).notNull(),
+    campus: varchar('campus', { length: 160 }).notNull(),
+    area: varchar('area', { length: 180 }).notNull(),
+    monthlyPriceTsh: integer('monthly_price_tsh').notNull(),
+    roomType: housingRoomTypeEnum('room_type').notNull(),
+    availableSpaces: integer('available_spaces').notNull().default(1),
+    status: housingListingStatusEnum('status').notNull().default('published'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('housing_listings_status_created_idx').on(t.status, t.createdAt),
+    index('housing_listings_campus_status_idx').on(t.campus, t.status),
+    index('housing_listings_owner_idx').on(t.ownerId),
+    index('housing_listings_price_idx').on(t.monthlyPriceTsh),
+  ],
+);
+
+export const housingImages = pgTable(
+  'housing_images',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    housingListingId: uuid('housing_listing_id').notNull().references(() => housingListings.id, { onDelete: 'cascade' }),
+    objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('housing_images_listing_idx').on(t.housingListingId)],
+);
+
+export const roommateRequests = pgTable(
+  'roommate_requests',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    introduction: varchar('introduction', { length: 600 }).notNull(),
+    university: varchar('university', { length: 160 }).notNull(),
+    campus: varchar('campus', { length: 160 }).notNull(),
+    preferredArea: varchar('preferred_area', { length: 180 }).notNull(),
+    minBudgetTsh: integer('min_budget_tsh').notNull(),
+    maxBudgetTsh: integer('max_budget_tsh').notNull(),
+    requirements: varchar('requirements', { length: 800 }).notNull(),
+    moveInPeriod: varchar('move_in_period', { length: 120 }).notNull(),
+    status: roommateRequestStatusEnum('status').notNull().default('active'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('roommate_requests_status_created_idx').on(t.status, t.createdAt),
+    index('roommate_requests_campus_status_idx').on(t.campus, t.status),
+    index('roommate_requests_owner_idx').on(t.ownerId),
+  ],
+);
+
+// ============================================================
+// CHUO MARKET V2 — PRIVATE STUDY LIBRARY
+// ============================================================
+
+export const studyMaterials = pgTable(
+  'study_materials',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    uploaderId: uuid('uploader_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 160 }).notNull(),
+    description: varchar('description', { length: 1200 }).notNull(),
+    university: varchar('university', { length: 160 }).notNull(),
+    program: varchar('program', { length: 160 }).notNull(),
+    studyYear: integer('study_year').notNull(),
+    subject: varchar('subject', { length: 160 }).notNull(),
+    materialType: libraryMaterialTypeEnum('material_type').notNull(),
+    objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    fileSize: integer('file_size').notNull(),
+    mimeType: varchar('mime_type', { length: 100 }).notNull().default('application/pdf'),
+    moderationStatus: moderationStatusEnum('moderation_status').notNull().default('pending'),
+    downloadCount: integer('download_count').notNull().default(0),
+    ...timestamps(),
+  },
+  (t) => [
+    index('study_materials_status_created_idx').on(t.moderationStatus, t.createdAt),
+    index('study_materials_university_program_idx').on(t.university, t.program),
+    index('study_materials_year_subject_idx').on(t.studyYear, t.subject),
+    index('study_materials_popular_idx').on(t.downloadCount),
+    index('study_materials_uploader_idx').on(t.uploaderId),
+  ],
+);
+
+// ============================================================
+// CHUO MARKET V2 — CAMPUS ALERTS
+// ============================================================
+
+export const campusAlerts = pgTable(
+  'campus_alerts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    publisherId: uuid('publisher_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 160 }).notNull(),
+    description: varchar('description', { length: 3000 }).notNull(),
+    category: alertCategoryEnum('category').notNull(),
+    university: varchar('university', { length: 160 }),
+    campus: varchar('campus', { length: 160 }),
+    trustLabel: alertTrustEnum('trust_label').notNull().default('community'),
+    sourceName: varchar('source_name', { length: 180 }),
+    sourceUrl: varchar('source_url', { length: 1000 }),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    status: campusAlertStatusEnum('status').notNull().default('published'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('campus_alerts_current_idx').on(t.status, t.publishedAt, t.expiresAt),
+    index('campus_alerts_campus_category_idx').on(t.campus, t.category),
+    index('campus_alerts_publisher_idx').on(t.publisherId),
+  ],
+);
+
+// ============================================================
+// CHUO MARKET V2 — STUDENT SERVICES
+// ============================================================
+
+export const serviceListings = pgTable(
+  'service_listings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    providerId: uuid('provider_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    title: varchar('title', { length: 140 }).notNull(),
+    description: varchar('description', { length: 1600 }).notNull(),
+    category: serviceCategoryEnum('category').notNull(),
+    priceFromTsh: integer('price_from_tsh'),
+    priceToTsh: integer('price_to_tsh'),
+    university: varchar('university', { length: 160 }).notNull(),
+    campus: varchar('campus', { length: 160 }).notNull(),
+    availability: varchar('availability', { length: 80 }).notNull(),
+    contactMethod: varchar('contact_method', { length: 24 }).notNull().default('whatsapp'),
+    status: serviceListingStatusEnum('status').notNull().default('published'),
+    ...timestamps(),
+  },
+  (t) => [
+    index('service_listings_status_created_idx').on(t.status, t.createdAt),
+    index('service_listings_category_campus_idx').on(t.category, t.campus),
+    index('service_listings_provider_idx').on(t.providerId),
+  ],
+);
+
+export const serviceImages = pgTable(
+  'service_images',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    serviceListingId: uuid('service_listing_id').notNull().references(() => serviceListings.id, { onDelete: 'cascade' }),
+    objectKey: varchar('object_key', { length: 500 }).notNull().unique(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('service_images_listing_idx').on(t.serviceListingId)],
+);
+
+// ============================================================
 // MARKETPLACE RELATIONS
 // ============================================================
+
+export const housingListingsRelations = relations(housingListings, ({ one, many }) => ({
+  owner: one(users, { fields: [housingListings.ownerId], references: [users.id] }),
+  images: many(housingImages),
+}));
+
+export const housingImagesRelations = relations(housingImages, ({ one }) => ({
+  listing: one(housingListings, { fields: [housingImages.housingListingId], references: [housingListings.id] }),
+}));
+
+export const roommateRequestsRelations = relations(roommateRequests, ({ one }) => ({
+  owner: one(users, { fields: [roommateRequests.ownerId], references: [users.id] }),
+}));
+
+export const studyMaterialsRelations = relations(studyMaterials, ({ one }) => ({
+  uploader: one(users, { fields: [studyMaterials.uploaderId], references: [users.id] }),
+}));
+
+export const campusAlertsRelations = relations(campusAlerts, ({ one }) => ({
+  publisher: one(users, { fields: [campusAlerts.publisherId], references: [users.id] }),
+}));
+
+export const serviceListingsRelations = relations(serviceListings, ({ one, many }) => ({
+  provider: one(users, { fields: [serviceListings.providerId], references: [users.id] }),
+  images: many(serviceImages),
+}));
+
+export const serviceImagesRelations = relations(serviceImages, ({ one }) => ({
+  listing: one(serviceListings, { fields: [serviceImages.serviceListingId], references: [serviceListings.id] }),
+}));
 
 export const usersRelations = relations(
   users,
