@@ -13,7 +13,7 @@ type Props = {
     priceTsh: number;
     category: string;
     createdAt: Date;
-    images: { fileUrl: string }[];
+    images: { id: string; fileUrl: string }[];
   };
   loggedIn: boolean;
   favoriteIds: string[];
@@ -26,7 +26,9 @@ export async function ListingCard({
 }: Props) {
   const t = await getTranslations('Browse');
 
-  const imageUrl = listing.images[0]?.fileUrl;
+  const imageUrl = listing.images[0]?.id
+  ? `/api/listings/images/${listing.images[0].id}`
+  : null;
 
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-violet/30 hover:shadow-lg">

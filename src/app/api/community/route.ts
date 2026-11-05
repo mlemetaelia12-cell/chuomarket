@@ -3,7 +3,6 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
 } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { NextResponse } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -54,11 +53,14 @@ function getPhotoKey(photoUrl: string, authorId: string): string | null {
       const basePath = baseUrl.pathname.replace(/\/$/, '');
 
       if (
+        baseUrl.protocol !== 'https:' ||
         imageUrl.protocol !== 'https:' ||
         imageUrl.origin !== baseUrl.origin ||
         imageUrl.search ||
         imageUrl.hash ||
-        !imageUrl.pathname.startsWith(`${basePath}/community/${authorId}/`)
+        !imageUrl.pathname.startsWith(
+          `${basePath}/community/${authorId}/`,
+        )
       ) {
         return null;
       }
@@ -96,66 +98,39 @@ export async function GET(request: Request) {
     with: { author: true },
   });
 
-  let storage: ReturnType<typeof getR2Client> | null = null;
+  const posts = rows.map((post) => {
+    let photoUrl: string | null = null;
 
-  if (r2PrivateBucket) {
-    try {
-      storage = getR2Client();
-    } catch (error) {
-      console.error('Community image storage initialization failed.', error);
-    }
-  }
+    if (
+      post.type === 'lost_found' &&
+      post.photoUrl &&
+      r2PrivateBucket
+    ) {
+      const key = getPhotoKey(post.photoUrl, post.authorId);
 
-  const posts = await Promise.all(
-    rows.map(async (post) => {
-      let photoUrl: string | null = null;
-
-      if (
-        post.type === 'lost_found' &&
-        post.photoUrl &&
-        storage &&
-        r2PrivateBucket
-      ) {
-        const key = getPhotoKey(post.photoUrl, post.authorId);
-
-        if (key) {
-          try {
-            photoUrl = await getSignedUrl(
-              storage,
-              new GetObjectCommand({
-                Bucket: r2PrivateBucket,
-                Key: key,
-              }),
-              { expiresIn: 300 },
-            );
-          } catch (error) {
-            console.error('Community image signing failed.', {
-              postId: post.id,
-              error,
-            });
-          }
-        }
+      if (key) {
+        photoUrl = `/api/community/${post.id}/photo`;
       }
+    }
 
-      return {
-        id: post.id,
-        type: post.type,
-        title: post.title,
-        description: post.description,
-        course: post.course,
-        year: post.year,
-        meetingPlace: post.meetingPlace,
-        photoUrl,
-        postStatus: post.postStatus,
-        lostFoundType: post.lostFoundType,
-        createdAt: post.createdAt,
-        author: {
-          username: post.author.username,
-          createdAt: post.author.createdAt,
-        },
-      };
-    }),
-  );
+    return {
+      id: post.id,
+      type: post.type,
+      title: post.title,
+      description: post.description,
+      course: post.course,
+      year: post.year,
+      meetingPlace: post.meetingPlace,
+      photoUrl,
+      postStatus: post.postStatus,
+      lostFoundType: post.lostFoundType,
+      createdAt: post.createdAt,
+      author: {
+        username: post.author.username,
+        createdAt: post.author.createdAt,
+      },
+    };
+  });
 
   return NextResponse.json(
     { posts },

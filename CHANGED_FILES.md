@@ -68,8 +68,10 @@ Compared with the uploaded source tree, this delivery contains **39 modified fil
 - `docs/QA_MATRIX.md` — PASS/BLOCKED/NOT TESTED matrix.
 - `migration-checksums.sha256` — baseline hash inventory for the preserved migrations and metadata.
 - `public/manifest.webmanifest` — PWA manifest.
-- `public/icons/chuo-market-192.png` and `public/icons/chuo-market-512.png` — standard PWA icons.
-- `public/icons/chuo-market-192-maskable.png` and `public/icons/chuo-market-512-maskable.png` — opaque maskable PWA icons.
+- `public/icons/icon-192.png` and `public/icons/icon-512.png` — standard PWA icons.
+- `public/icons/icon-maskable-192.png` and `public/icons/icon-maskable-512.png` — maskable PWA icons.
+- `public/apple-touch-icon.png` and `public/favicon.ico` — Apple home-screen and browser icons.
+- `public/chuo-market-splash-screen.jpg` — current Chuo Market splash artwork.
 
 ## Intentionally unchanged
 

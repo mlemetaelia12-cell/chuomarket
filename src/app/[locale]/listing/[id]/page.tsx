@@ -140,7 +140,7 @@ export default async function ListingDetailPage({ params }: Props) {
                       fill
                       priority
                       sizes="(max-width: 1024px) 100vw, 65vw"
-                      src={images[0].fileUrl}
+                      src={`/api/listings/images/${images[0].id}`}
                       unoptimized
                     />
 
@@ -163,7 +163,7 @@ export default async function ListingDetailPage({ params }: Props) {
                             className="object-contain"
                             fill
                             sizes="(max-width: 640px) 30vw, 160px"
-                            src={image.fileUrl}
+                            src={`/api/listings/images/${image.id}`}
                             unoptimized
                           />
                         </div>

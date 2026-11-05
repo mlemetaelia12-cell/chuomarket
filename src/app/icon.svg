@@ -1,39 +1,14 @@
-
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1769AA"/>
-      <stop offset="100%" stop-color="#123B5B"/>
+      <stop offset="0%" stop-color="#5400D8"/>
+      <stop offset="100%" stop-color="#160044"/>
     </linearGradient>
   </defs>
-
-  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
-
-  <!-- Graduation cap -->
-  <path d="M105 145 L255 75 L405 145 L255 215 Z"
-        fill="#70AED7"/>
-  <path d="M145 165 V225 Q255 285 365 225 V165"
-        fill="#247DBB"/>
-  <path d="M405 145 V225" stroke="#FFFFFF" stroke-width="9"/>
-  <circle cx="405" cy="235" r="10" fill="#FFFFFF"/>
-
-  <!-- Letter C -->
-  <path d="M345 190
-    A155 155 0 1 0 345 370
-    L300 320
-    A90 90 0 1 1 300 240 Z"
-    fill="#FFFFFF"/>
-
-  <!-- Shopping cart -->
-  <g fill="none" stroke="#239B62"
-     stroke-width="17" stroke-linecap="round"
-     stroke-linejoin="round">
-    <path d="M190 225 L215 225 L245 315 L345 315 L375 245 L225 245"/>
-    <path d="M250 275 H360"/>
-  </g>
-
-  <g fill="#239B62">
-    <circle cx="255" cy="350" r="13"/>
-    <circle cx="335" cy="350" r="13"/>
-  </g>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M176 204v-67c0-48 33-82 80-82s80 34 80 82v67" fill="none" stroke="#fff" stroke-width="24" stroke-linecap="round"/>
+  <path d="M142 196h228l28 208H114z" fill="none" stroke="#fff" stroke-width="19" stroke-linejoin="round"/>
+  <text x="93" y="342" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="176" font-weight="900">C</text>
+  <text x="245" y="342" fill="#B7FF00" font-family="Arial,Helvetica,sans-serif" font-size="176" font-weight="900">M</text>
+  <path d="M84 420c104-72 242-91 357-31" fill="none" stroke="#B7FF00" stroke-width="18" stroke-linecap="round"/>
 </svg>

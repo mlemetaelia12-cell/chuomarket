@@ -1,6 +1,6 @@
+
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { BookOpen, House, Search, ShieldAlert } from 'lucide-react';
@@ -22,7 +22,13 @@ type Post = {
   answers: { body: string; createdAt: string; username: string }[];
 };
 
-export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: boolean }) {
+export function CommunityBoard({
+  posts,
+  loggedIn,
+}: {
+  posts: Post[];
+  loggedIn: boolean;
+}) {
   const t = useTranslations('Community');
   const [busy, setBusy] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -42,6 +48,7 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
       const response = await fetch(`/api/community/${id}/download`, {
         cache: 'no-store',
       });
+
       if (!response.ok) throw new Error();
 
       const file = await response.blob();
@@ -121,7 +128,8 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
     if (post.type !== 'material') return !courseFilter && !yearFilter;
 
     return (
-      (!courseFilter || (post.course ?? '').toLowerCase().includes(courseFilter.toLowerCase())) &&
+      (!courseFilter ||
+        (post.course ?? '').toLowerCase().includes(courseFilter.toLowerCase())) &&
       (!yearFilter || String(post.year ?? '') === yearFilter)
     );
   });
@@ -179,7 +187,9 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
           >
             <Icon className="mb-4 h-6 w-6 text-slate-600" />
             <h2 className="font-bold">{title}</h2>
-            <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {description}
+            </p>
             <span className="mt-4 inline-block text-xs font-bold text-brand-700">
               {t('postFree')} →
             </span>
@@ -236,8 +246,12 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
               >
                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   <span>{t(`types.${post.type}`)}</span>
-                  {post.lostFoundType && <span>· {t(post.lostFoundType)}</span>}
-                  <span>· {post.postStatus === 'resolved' ? t('resolved') : t('open')}</span>
+                  {post.lostFoundType && (
+                    <span>· {t(post.lostFoundType)}</span>
+                  )}
+                  <span>
+                    · {post.postStatus === 'resolved' ? t('resolved') : t('open')}
+                  </span>
                 </div>
 
                 <h3 className="mt-2 font-bold">{post.title}</h3>
@@ -259,26 +273,33 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
 
                 {post.answers.length > 0 && (
                   <div className="mt-3 space-y-2 rounded-xl bg-canvas p-3">
-                    <p className="text-xs font-bold text-slate-600">{t('answers')}</p>
+                    <p className="text-xs font-bold text-slate-600">
+                      {t('answers')}
+                    </p>
                     {post.answers.map((answer, index) => (
                       <div
                         className="border-t border-divider pt-2 text-xs"
                         key={`${post.id}-${index}`}
                       >
-                        <p className="whitespace-pre-wrap text-brand-700">{answer.body}</p>
-                        <p className="mt-1 text-slate-400">@{answer.username}</p>
+                        <p className="whitespace-pre-wrap text-brand-700">
+                          {answer.body}
+                        </p>
+                        <p className="mt-1 text-slate-400">
+                          @{answer.username}
+                        </p>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {post.photoUrl && (
-                  <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl">
-                    <Image
+                 <div className="relative mt-3 h-56 w-full overflow-hidden rounded-xl">
+                    {/* Private R2 image served through our authenticated API */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       alt={t('postPhoto')}
-                      className="object-cover"
-                      fill
-                      sizes="(max-width: 768px) 100vw, 768px"
+                      className="h-full w-full object-cover"
+                      loading="lazy"
                       src={post.photoUrl}
                     />
                   </div>
@@ -302,7 +323,10 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
 
                   <button
                     className="rounded-full border border-brand-200 px-3 py-1.5 text-xs font-bold"
-                    disabled={busy === post.id || !(answerDrafts[post.id] ?? '').trim()}
+                    disabled={
+                      busy === post.id ||
+                      !(answerDrafts[post.id] ?? '').trim()
+                    }
                     onClick={() => void answer(post.id)}
                     type="button"
                   >
@@ -312,7 +336,8 @@ export function CommunityBoard({ posts, loggedIn }: { posts: Post[]; loggedIn: b
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <span className="text-xs text-slate-400">
-                    @{post.author.username} · {new Date(post.createdAt).toLocaleDateString()}
+                    @{post.author.username} ·{' '}
+                    {new Date(post.createdAt).toLocaleDateString()}
                   </span>
 
                   <div className="flex gap-3">

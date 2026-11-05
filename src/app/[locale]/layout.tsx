@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
+import Image from 'next/image';
 import { Suspense } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { notFound } from 'next/navigation';
 
+import { AppSplashScreen } from '@/components/branding/app-splash-screen';
 import { BottomNavigation } from '@/components/navigation/bottom-navigation';
 import { LanguageSwitcher } from '@/components/navigation/language-switcher';
 import { Link } from '@/i18n/navigation';
@@ -20,8 +22,12 @@ export const metadata: Metadata = {
   description: 'The marketplace and community for university students in Tanzania.',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icons/chuo-market-192.png',
-    apple: '/icons/chuo-market-192.png',
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
   appleWebApp: {
     capable: true,
@@ -31,7 +37,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1769AA',
+  themeColor: '#3900A6',
   width: 'device-width',
   initialScale: 1,
 };
@@ -68,6 +74,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         className={`${plusJakartaSans.variable} min-h-screen bg-canvas font-sans text-ink antialiased`}
       >
         <NextIntlClientProvider messages={messages}>
+          <AppSplashScreen />
+
           <a
             className="sr-only fixed left-4 top-4 z-[100] rounded-xl bg-brand-950 px-5 py-3 text-sm font-bold text-white focus:not-sr-only"
             href="#main-content"
@@ -82,9 +90,14 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
                 className="group inline-flex items-center gap-2.5"
                 href="/"
               >
-                <span className="flex size-10 items-center justify-center rounded-xl bg-brand-950 text-sm font-black tracking-tight text-lime shadow-sm transition group-hover:scale-105">
-                  CM
-                </span>
+                <Image
+                  alt="Chuo Market"
+                  className="size-10 rounded-xl object-cover shadow-sm transition group-hover:scale-105"
+                  height={40}
+                  priority
+                  src="/icons/icon-192.png"
+                  width={40}
+                />
 
                 <span className="text-lg font-black tracking-tight text-brand-950">
                   chuo

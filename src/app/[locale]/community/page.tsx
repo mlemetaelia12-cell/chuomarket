@@ -1,3 +1,4 @@
+
 import { desc, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/db';
@@ -14,19 +15,26 @@ export default async function CommunityPage({
     searchParams,
     getTranslations('Community'),
   ]);
+
   const selectedType =
-    requestedType === 'material' || requestedType === 'room' || requestedType === 'lost_found'
+    requestedType === 'material' ||
+    requestedType === 'room' ||
+    requestedType === 'lost_found'
       ? requestedType
       : undefined;
+
   const [posts, user] = await Promise.all([
     db.query.communityPosts.findMany({
-      where: selectedType ? eq(communityPosts.type, selectedType) : undefined,
+      where: selectedType
+        ? eq(communityPosts.type, selectedType)
+        : undefined,
       orderBy: [desc(communityPosts.createdAt)],
       limit: 60,
       with: { author: true },
     }),
     requireMarketplaceUser(),
   ]);
+
   const answers = await db
     .select({
       postId: communityAnswers.postId,
@@ -38,6 +46,7 @@ export default async function CommunityPage({
     .innerJoin(users, eq(communityAnswers.authorId, users.id))
     .orderBy(desc(communityAnswers.createdAt))
     .limit(150);
+
   const safePosts = posts.map((post) => ({
     id: post.id,
     type: post.type,
@@ -46,11 +55,21 @@ export default async function CommunityPage({
     course: post.course,
     year: post.year,
     meetingPlace: post.meetingPlace,
-    photoUrl: post.photoUrl,
+
+    photoUrl:
+      post.type === 'lost_found' && post.photoUrl
+        ? `/api/community/${post.id}/photo`
+        : null,
+
     postStatus: post.postStatus,
     lostFoundType: post.lostFoundType,
     createdAt: post.createdAt.toISOString(),
-    author: { username: post.author.username, createdAt: post.author.createdAt.toISOString() },
+
+    author: {
+      username: post.author.username,
+      createdAt: post.author.createdAt.toISOString(),
+    },
+
     answers: answers
       .filter((answer) => answer.postId === post.id)
       .map((answer) => ({
@@ -59,6 +78,7 @@ export default async function CommunityPage({
         username: answer.username,
       })),
   }));
+
   return (
     <div className="space-y-4">
       <CommunityBoard loggedIn={Boolean(user)} posts={safePosts} />
