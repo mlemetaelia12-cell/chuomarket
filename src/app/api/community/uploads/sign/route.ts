@@ -51,6 +51,7 @@ export async function POST(request: Request) {
   }
 
   const privateBucket = getPrivateR2Bucket();
+
   if (!privateBucket) {
     console.error('[R2 CONFIG MISSING] Private bucket is not configured.');
 
@@ -61,27 +62,38 @@ export async function POST(request: Request) {
   }
 
   try {
-    const extension = parsed.data.kind === 'pdf' ? 'pdf' : 'webp';
+    const extension =
+      parsed.data.kind === 'pdf' ? 'pdf' : 'webp';
 
     const key = `community/${user.id}/${randomUUID()}.${extension}`;
 
+    // Do not sign Content-Length for browser-based PUT uploads.
     const command = new PutObjectCommand({
       Bucket: privateBucket,
       Key: key,
       ContentType: parsed.data.contentType,
-      ContentLength: parsed.data.size,
     });
 
     const uploadUrl = await getSignedUrl(
       getR2Client(),
       command,
-      { expiresIn: 300 },
+      {
+        expiresIn: 300,
+        signableHeaders: new Set(['content-type']),
+      },
     );
 
-    return NextResponse.json({
-      uploadUrl,
-      fileUrl: `r2-private:${key}`,
-    });
+    return NextResponse.json(
+      {
+        uploadUrl,
+        fileUrl: `r2-private:${key}`,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
   } catch (error) {
     console.error('[R2 SIGNING ERROR]', error);
 
